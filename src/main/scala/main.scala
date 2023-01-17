@@ -2,10 +2,12 @@ package ptcgtool
 
 import api.CardFetcher
 
+import ptcgtool.api.IOTools.clearCache
+
 import java.awt.Toolkit
 import scala.swing.Dimension
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.collection.parallel.CollectionConverters._
+import scala.collection.parallel.CollectionConverters.*
 
 //get current screen size
 val screenSize = Toolkit.getDefaultToolkit.getScreenSize
@@ -20,6 +22,8 @@ def main(): Unit =
   cards.onComplete {
     case scala.util.Success(cards) =>
       cards.par.foreach(println)
+      cards.par.foreach(_.getImg)
+      clearCache
     case scala.util.Failure(exception) =>
       println(exception)
   }

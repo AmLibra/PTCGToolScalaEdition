@@ -17,19 +17,18 @@ private def stream(toPath: String): OutputStream = FileOutputStream(toPath)
 
 private def transferData(from: InputStream, target: OutputStream): Unit = from transferTo target
 
-private def isCreated(folder: File): Boolean = {
-  if (!folder.exists) {
+private def isCreated(folder: File): Boolean =
+  if (!folder.exists)
     folder.mkdirs()
-  }
   folder.exists
-}
+
 
 // IOTools class is static and is a collection of methods for working with Input/Output
 object IOTools:
-  val CACHED_FILES_LOCATION: String = System.getProperty("user.dir") + "\\src\\main\\resources\\cache\\images" + "\\"
+  val CACHED_FILES_LOCATION: String = System.getProperty("user.dir") + "\\src\\resources\\cache\\images" + "\\"
   val IMAGE_FILE_EXTENSION = ".png"
-  val DECKS_LOCATION: String = System.getProperty("user.dir") + "\\src\\main\\resources\\decks\\"
-  val DECK_FILE_EXTENSION = ".deck"
+  private val DECKS_LOCATION: String = System.getProperty("user.dir") + "\\src\\resources\\decks\\"
+  private val DECK_FILE_EXTENSION = ".deck"
   private val cacheFolder: File = new File(CACHED_FILES_LOCATION)
 
   /**
@@ -38,7 +37,7 @@ object IOTools:
    * @param fromUrl the URL we want to download the image from
    * @param toPath  the absolute Path on the disk, we can get the Project's path using System.getProperty("user.dir")
    */
-  def saveImage(fromUrl: URL, toPath: String): Unit = {
+  def saveImage(fromUrl: URL, toPath: String): Unit =
     Try(Using.resources(fromUrl.openStream, FileOutputStream(toPath)) { (is, os) =>
       is.transferTo(os)
     }).recover {
@@ -46,8 +45,8 @@ object IOTools:
         File(CACHED_FILES_LOCATION).mkdirs()
         saveImage(fromUrl, toPath)
     }
-  }
-  def clearCache(): Unit = cacheFolder.listFiles foreach (_.delete)
+
+  def clearCache: Unit = cacheFolder.listFiles foreach (_.delete)
 
   def directorySize: Long = cacheFolder.listFiles map (_.length) sum
 

@@ -52,13 +52,4 @@ final class CardFetcher {
 
   // public method to fetch a list of cards with a name
   def fetchCards(name: String): Future[List[Card]] = fetchCardsAsync(name)
-
-  def testAPI(): Unit =
-    val cardsFuture = fetchCardsAsync("lugia")
-    cardsFuture.onComplete {
-      case scala.util.Success(cards) =>
-        cards.foreach(card => println(card.name.get + " " + card.id.get + " " + card.images.get.small.get))
-      case scala.util.Failure(exception) =>
-        println(exception)
-    }
 }

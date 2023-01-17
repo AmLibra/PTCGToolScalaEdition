@@ -4,7 +4,8 @@ ThisBuild / scalaVersion := "3.2.1"
 
 libraryDependencies ++= Seq(
   "org.scala-lang.modules" %% "scala-swing" % "3.0.0",
-  "org.json4s" %% "json4s-native" % "4.0.6"
+  "org.json4s" %% "json4s-native" % "4.0.6",
+  "org.scala-lang.modules" %% "scala-parallel-collections" % "1.0.4",
 )
 
 lazy val root = (project in file("."))

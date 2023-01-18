@@ -12,7 +12,7 @@ import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
 import scala.io.Source
 
-final class CardFetcher {
+final class CardFetcher:
   // https://api.pokemontcg.io/v2/cards?q=name:charizard&x-api-key=2e04bfdb-5eb1-4eaf-9c3d-316a1abb6c70
   // is the url to get the card data of charizard cards
   // this returns a json object with a data field that contains a list of cards
@@ -28,9 +28,7 @@ final class CardFetcher {
     Future {
       val response = Source.fromInputStream(new URL(url).openStream()).mkString
       val json = parse(response)
-      // extract the data field from the json object, and get a list o JSON cards
       val data = (json \ "data").extract[List[JValue]]
-      // convert the list of JSON cards to a list of CardJSON objects
       data.map(Card(_))
     }
 
@@ -41,9 +39,7 @@ final class CardFetcher {
     Future {
       val response = Source.fromInputStream(new URL(url).openStream()).mkString
       val json = parse(response)
-      // extract the data field from the json object, and get a list o JSON cards
       val data = (json \ "data").extract[JValue]
-      // convert the list of JSON cards to a list of CardJSON objects
       Card(data)
     }
 
@@ -52,4 +48,3 @@ final class CardFetcher {
 
   // public method to fetch a list of cards with a name
   def fetchCards(name: String): Future[List[Card]] = fetchCardsAsync(name)
-}

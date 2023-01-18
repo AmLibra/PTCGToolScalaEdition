@@ -6,10 +6,10 @@ import api.IOTools.{CACHED_FILES_LOCATION, IMAGE_FILE_EXTENSION, saveImage}
 
 import org.json4s.*
 import org.json4s.native.Serialization
+import scalafx.scene.image.Image
 
-import java.io.File
+import java.io.{File, FileInputStream}
 import java.net.URL
-import scala.swing.Image
 
 // fields need default values for json4s to work therefore they are all Option
 case class Card(name: Option[String],
@@ -45,7 +45,7 @@ case class Card(name: Option[String],
 
   def isStandardLegal: Boolean = legalities.exists(_.standard.get == "Legal")
 
-  private def getLargeImageUrl: URL = URL(images.flatMap(_.large).getOrElse(throw new Exception("No large image found")))
+  def getLargeImageUrl: URL = URL(images.flatMap(_.large).getOrElse(throw new Exception("No large image found")))
 
   def getId: String = id.getOrElse(throw new Exception("No id found"))
 
@@ -56,7 +56,7 @@ case class Card(name: Option[String],
    *
    * @return the string that can be used to load the image in ImagePanel
    */
-  def getImg: String =
+  def getImg: Image =
     val imgDir = CACHED_FILES_LOCATION + getId + IMAGE_FILE_EXTENSION
     if (!File(imgDir).isFile) { // checks if the file exists and is not corrupted
       println("Image for " + this + " not found in cache. Downloading...")
@@ -64,7 +64,7 @@ case class Card(name: Option[String],
       saveImage(getLargeImageUrl, imgDir)
       println("--> Done fetching: " + this + "!")
     }
-    imgDir
+    Image(FileInputStream(imgDir))
 
   // override toString method to print the name of the card and its id
   override def toString: String = name.getOrElse("No name found") + " (" + id.getOrElse("No id found") + ")"

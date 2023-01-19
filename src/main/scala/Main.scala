@@ -3,6 +3,7 @@ package ptcgtool
 import api.CardFetcher
 
 import javafx.scene.input.ScrollEvent
+import ptcgtool.objects.Deck
 import scalafx.application.JFXApp3.PrimaryStage
 import scalafx.application.Platform.runLater
 import scalafx.application.{JFXApp3, Platform}
@@ -13,6 +14,9 @@ import scalafx.scene.control.*
 import scalafx.scene.image.{Image, ImageView}
 import scalafx.scene.input.ScrollEvent.Scroll
 import scalafx.scene.layout.{HBox, VBox}
+import scalafx.Includes.jfxHBox2sfx
+import scalafx.stage.Modality.ApplicationModal
+import scalafx.stage.{Modality, Stage, Window}
 
 import java.awt.Toolkit.getDefaultToolkit
 import java.awt.{Dimension, Toolkit}
@@ -32,38 +36,48 @@ object Main extends JFXApp3:
     futureCards onComplete (cards => runLater {
       imageList.children = cards.get map (card =>
          val image = ImageView(card.getImg)
-         // images should preserve their aspect ratio but be scaled to fit the window
-          image.fitHeight = windowSize.height / 2.6
+          image.fitHeight = windowSize.height * 0.28
           image.preserveRatio = true
+          image.onMouseClicked = _ =>
+            new Stage:
+              initModality(ApplicationModal)
+              title = card.getName
+              scene = new Scene(new VBox(new Label(card.getName), new ImageView(card.getImg)), 200, 200)
+              show()
           image
         )
     })
 
+  private def getContent(scrollPane: ScrollPane): HBox =
+    scrollPane.content.value.asInstanceOf[javafx.scene.layout.HBox]
 
-  private def deckBuilderTabContent: VBox =
-    val imageList = new HBox:
-      spacing = 10
-      padding = Insets(10)
-      // color should be some very dark gray
-      style = "-fx-background-color: #1a1a1a"
+  private def horizontalImageBoxScrollPane: ScrollPane =
+    new ScrollPane:
+      val imageList: HBox = new HBox:
+        spacing = 10
+        padding = Insets(10)
+        style = "-fx-background-color: #1a1a1a"
 
-    val horizontalScrollPane: ScrollPane = new ScrollPane:
       content = imageList
-      prefViewportWidth = windowSize.width / 2.4
-      prefViewportHeight = windowSize.height / 2.4
+      prefViewportWidth = windowSize.width
+      prefViewportHeight = windowSize.height * 0.3
       vbarPolicy = ScrollPane.ScrollBarPolicy.Never
-      //border is transparent
       style = "-fx-background-color: transparent; -fx-border-color: transparent;"
       fitToWidth = true
       fitToHeight = true
 
       addEventFilter(Scroll, (event: ScrollEvent) => {
-        val deltaY = - event.getDeltaY * 1.5
+        val deltaY = -event.getDeltaY * 1.5
         val width = imageList.width.get() - this.getViewportBounds.getWidth
         val hValue = this.getHvalue
         this.setHvalue(hValue - deltaY / width)
       })
 
+
+  private def deckBuilderTabContent: VBox =
+    val deck = new Deck(Nil)
+
+    val searchResultsPane: ScrollPane = horizontalImageBoxScrollPane
     val searchBar: TextField = new TextField:
       promptText = "Search for a card..."
       prefWidth = windowSize.width * 0.4
@@ -73,22 +87,22 @@ object Main extends JFXApp3:
     val searchButton: Button = new Button:
       text = "Search"
       style = "-fx-border-color: transparent;"
-      onAction = _ => searchCards(searchBar, imageList)
+      onAction = _ => searchCards(searchBar, getContent(searchResultsPane))
 
     //searchBar should be on the left, searchButton on the right
     val searchBarBox = new HBox:
       spacing = 10
       padding = Insets(10)
-      //center the search bar
       alignment = Pos.Center
-      children = searchBar :: searchButton :: Nil
+      children =
+        searchBar ::
+        searchButton ::
+        Nil
 
     val deckLabel = Label("Deck")
     val deckNameField = TextField()
     val saveDeck = Button("Save Deck")
-    val deckList = new HBox
-    val deckScrollPane = new ScrollPane:
-      content = deckList
+    val deckViewPane = horizontalImageBoxScrollPane
 
     //deckLabel, deckNameField and saveDeck should be in a HBox
     val deckViewHeader = new HBox:
@@ -98,12 +112,15 @@ object Main extends JFXApp3:
       padding = Insets(10)
 
     val deckView = new VBox:
-      children = Seq(deckViewHeader, deckScrollPane)
+      children = Seq(
+        deckViewHeader,
+        deckViewPane
+      )
       spacing = 10
       padding = Insets(10)
 
     new VBox:
-      children = List(searchBarBox, horizontalScrollPane, new Separator, deckView)
+      children = List(searchBarBox, searchResultsPane, new Separator, deckView)
       prefWidth = windowSize.width * 0.8
       prefHeight = windowSize.height * 0.8
       style = "-fx-background-color: #1a1a1a"
@@ -121,6 +138,7 @@ object Main extends JFXApp3:
     println("Starting GUI...")
     new PrimaryStage:
       title = "PTCG Tool"
+
       scene = new Scene(windowSize.width, windowSize.height):
         val deckBuilderTab: Tab = new Tab:
           text = "Deck Builder"

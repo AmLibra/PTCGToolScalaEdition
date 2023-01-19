@@ -60,7 +60,6 @@ case class Card(name: Option[String],
     val imgDir = CACHED_FILES_LOCATION + getId + IMAGE_FILE_EXTENSION
     if (!File(imgDir).isFile) { // checks if the file exists and is not corrupted
       println("Image for " + this + " not found in cache. Downloading...")
-      println("Image URL: " + getLargeImageUrl)
       saveImage(getLargeImageUrl, imgDir)
       println("--> Done fetching: " + this + "!")
     }

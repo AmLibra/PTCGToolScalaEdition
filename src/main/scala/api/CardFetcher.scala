@@ -12,7 +12,7 @@ import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
 import scala.io.Source
 
-final class CardFetcher:
+object CardFetcher:
   // https://api.pokemontcg.io/v2/cards?q=name:charizard&x-api-key=2e04bfdb-5eb1-4eaf-9c3d-316a1abb6c70
   // is the url to get the card data of charizard cards
   // this returns a json object with a data field that contains a list of cards
@@ -24,7 +24,7 @@ final class CardFetcher:
   // fetchCards but asynchonously
   private def fetchCardsAsync(name: String): Future[List[Card]] =
     implicit val formats: Formats = Serialization.formats(NoTypeHints)
-    val url = s"$baseUrl?q=name:$name&x-api-key=$apiKey"
+    val url = s"$baseUrl?q=name:*$name*&x-api-key=$apiKey"
     Future {
       val response = Source.fromInputStream(new URL(url).openStream()).mkString
       val json = parse(response)

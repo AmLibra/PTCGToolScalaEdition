@@ -52,7 +52,7 @@ object IOTools:
 
   def removeDeckExtension(deckName: String): String = deckName.replace(DECK_FILE_EXTENSION, "")
 
-  def addDeckExtension(deckName: String): String = deckName + DECK_FILE_EXTENSION
+  private def addDeckExtension(deckName: String): String = deckName + DECK_FILE_EXTENSION
 
   /**
    * Used to write a Deck to the disk, generating a file with the .deck extension that we can read later

@@ -1,37 +1,46 @@
 package ptcgtool
 package objects
 
-import api.Card
-import api.CardFetcher
+import api.{Card, CardFetcher}
+import api.CardFetcher.fetchCard
 
-import scala.language.postfixOps
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+import scala.language.postfixOps
 import scala.util.{Failure, Success}
 
 // this is the implementation of a Pokemon TCG deck of Cards (a deck of 60 cards)
 // it is a List of Cards
-final class Deck(cards: Seq[Card]):
-  // this is a method that returns the number of cards in the deck
+final class Deck:
+
+  private var cards: List[Card] = List.empty[Card]
   private def size: Int = cards.size
 
   def countOf(card: Card): Int = cards.count(_ == card)
 
   def countOf(cardName: String): Int = cards.count(_.name.get == cardName)
 
-  def all: Seq[Card] = cards
+  def all: Seq[Card] =
+    sort
+    cards
 
-  def pokemonCards: Seq[Card] = cards.filter(_.isPokemon)
+  def pokemonCards: Seq[Card] = cards.filter(_.isPokemon).sortBy(_.name.get)
 
-  def trainerCards: Seq[Card] = cards.filter(_.isTrainer)
+  def trainerCards: Seq[Card] = cards.filter(_.isTrainer).sortBy(_.name.get)
 
-  def energyCards: Seq[Card] = cards.filter(_.isEnergy)
+  def energyCards: Seq[Card] = cards.filter(_.isEnergy).sortBy(_.name.get)
 
   // add a card to the deck
-  def add(card: Card): Deck = Deck(cards :+ card)
+  def add(card: Card): Unit = cards = card :: cards
 
   // remove a card from the deck
-  def remove(card: Card): Deck = Deck(cards.filter(_ != card))
+  def remove(card: Card): Unit = cards = cards.diff(List(card))
+
+  // sort the deck: first by card type (Pokemon > Trainer > Energy), then by card name
+  def sort: Unit =
+    val (pokemon, trainersAndEnergies) = cards.partition(_.isPokemon)
+    val (trainers, energies) = trainersAndEnergies.partition(_.isTrainer)
+    cards = pokemon.sortBy(_.name.get) ++ trainers.sortBy(_.name.get) ++ energies.sortBy(_.name.get)
 
   // check if the deck contains a card
   def contains(card: Card): Boolean = cards.contains(card)
@@ -57,33 +66,37 @@ final class Deck(cards: Seq[Card]):
       val cardCounts = cards.distinct map countOf
       val cardNames = uniqueCardIds map (id => cards.find(_.getId == id).get.getName)
       val cardLines =
-         cardCounts zip cardNames zip uniqueCardIds map { case ((count, name), id) => s"$count $name $id" }
+        cardCounts zip cardNames zip uniqueCardIds map { case ((count, name), id) => s"$count $name $id" }
       cardLines.mkString("\n")
 
     val pokemonLines = print(pokemonCards)
     val trainerLines = print(trainerCards)
     val energyLines = print(energyCards)
-    s"Pokemon ($pokemonCards.size):\n$pokemonLines\n" +
-      s"Trainers ($trainerCards.size):\n$trainerLines\n" +
-      s"Energy ($energyCards.size):\n$energyLines"
 
-  def parseCardLine(line: String): Future[Card] =
-    val Array(count, name, id) = line.split(" ")
-    val cardFetcher = new CardFetcher()
-    cardFetcher.fetchCard(id)
+    val pokemonHeader = s"Pokemon (${pokemonCards.size}):\n"
+    val trainerHeader = s"Trainers (${trainerCards.size}):\n"
+    val energyHeader = s"Energy (${energyCards.size}):\n"
+
+    pokemonHeader + s"$pokemonLines\n" +
+      trainerHeader + s"$trainerLines\n" +
+      energyHeader + s"$energyLines"
+
+  private def parseCardLine(line: String): Future[Card] =
+    val Array(_, _, id) = line.split(" ")
+    fetchCard(id)
 
   def parseDeck(deckString: String): Deck =
-    var deck: Deck = Deck(Seq())
+    var deck: Deck = new Deck
     val lines = deckString.split("\n")
     // remove the first line, which is the deck name
     val cardLines = lines.drop(1)
     // remove the header lines, all valid lines should start with a number
     val validCardLines = cardLines.filter(_.head.isDigit)
     val cards = validCardLines.map(parseCardLine).toSeq
-    cards.foreach(card => card.onComplete {
-      case Success(value) => deck = deck.add(value)
+    Future.sequence(cards).onComplete {
+      case Success(cards) => cards.foreach(deck.add)
       case Failure(exception) => println(exception)
-    })
+    }
     deck
 
 

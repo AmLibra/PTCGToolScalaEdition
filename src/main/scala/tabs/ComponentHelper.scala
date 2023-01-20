@@ -8,15 +8,15 @@ import javafx.event.EventHandler
 import javafx.scene.input.{MouseEvent, ScrollEvent}
 import scalafx.Includes.jfxHBox2sfx
 import scalafx.application.Platform.runLater
-import scalafx.geometry.{Insets, Orientation}
 import scalafx.geometry.Pos.Center
+import scalafx.geometry.{Insets, Orientation}
 import scalafx.scene.Scene
 import scalafx.scene.control.ScrollPane.ScrollBarPolicy.Never
-import scalafx.scene.control.{Button, Label, ScrollPane, Separator}
+import scalafx.scene.control.*
 import scalafx.scene.image.ImageView
 import scalafx.scene.input.ScrollEvent.Scroll
-import scalafx.scene.layout.BorderStrokeStyle.Solid
 import scalafx.scene.layout.*
+import scalafx.scene.layout.BorderStrokeStyle.Solid
 import scalafx.scene.paint.Color.{Black, White}
 import scalafx.stage.Modality.ApplicationModal
 import scalafx.stage.Stage
@@ -26,13 +26,24 @@ import java.awt.Dimension
 
 private val SCROLL_SPEED = 1.5
 
-def separator(o: Orientation): Separator =
+def Separator(o: Orientation): Separator =
   new Separator:
     orientation = o
 
 def SimpleButton(text: String, eventHandler: EventHandler[_ >: MouseEvent]): Button =
   new Button(text):
     onMouseClicked = eventHandler
+
+def SimpleSearchBar(search: String => Unit): HBox =
+  def SimpleSearchField(search: String => Unit): TextField =
+    new TextField:
+      promptText = "Search for a card..."
+      onAction = _ => search(text.value)
+
+  new HBox:
+    val textField: TextField = SimpleSearchField(search)
+    val searchButton: Button = SimpleButton("Search", _ => search(textField.text.value))
+    children = Seq(textField, searchButton)
 
 def horizontalImageBoxScrollPane(verticalRatio: Double, windowSize: Dimension): ScrollPane =
   new ScrollPane:

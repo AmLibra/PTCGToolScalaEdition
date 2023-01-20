@@ -49,25 +49,19 @@ def deckBuilderTabContent(windowSize: Dimension): VBox =
 
   val searchView: VBox = new VBox:
     val searchBarBox: HBox = new HBox:
-      def searchCards(searchBar: TextField): Unit =
+      def fetchCardsAndUpdate(query: String): Unit =
         def toSearchResultsView(card: Card): ImageView =
           cardImageView(card, 0.28, windowSize, _ => deckManagerCardWindow(card, deck, deckViewPane, windowSize))
 
         def updateSearchResultsPane(cards: Seq[Card]): Unit =
           runLater(getContent(searchResultsPane).children = cards.par map toSearchResultsView seq)
 
-        fetchCards(searchBar.getText) andThen {
+        fetchCards(query) andThen {
           case Success(cards) => updateSearchResultsPane(cards)
           case Failure(_) => println("Failed to fetch cards")
         }
 
-      val searchBar: TextField = new TextField:
-        promptText = "Search for a card..."
-        prefWidth = windowSize.width * 0.4
-        onAction = _ => searchCards(this)
-      children = searchBar ::
-        SimpleButton("Search", _ => searchCards(searchBar)) ::
-        SimpleButton("Clear Cache", _ => clearCache) :: Nil
+      children = SimpleSearchBar(fetchCardsAndUpdate) :: SimpleButton("Clear Cache", _ => clearCache) :: Nil
     children = Seq(searchBarBox, searchResultsPane)
 
   val deckView: VBox = new VBox:
@@ -76,4 +70,4 @@ def deckBuilderTabContent(windowSize: Dimension): VBox =
     children = Seq(deckViewHeader, deckViewPane)
 
   new VBox:
-    children = List(searchView, separator(Horizontal), deckView)
+    children = List(searchView, Separator(Horizontal), deckView)

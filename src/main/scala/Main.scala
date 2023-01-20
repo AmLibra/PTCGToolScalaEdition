@@ -16,7 +16,7 @@ import scalafx.scene.Scene
 import scalafx.scene.control.*
 import scalafx.scene.image.{Image, ImageView}
 import scalafx.scene.input.ScrollEvent.Scroll
-import scalafx.scene.layout.{HBox, VBox}
+import scalafx.scene.layout.{Background, BackgroundFill, Border, BorderStroke, BorderStrokeStyle, BorderWidths, CornerRadii, HBox, VBox}
 import scalafx.scene.paint.Color
 import scalafx.scene.paint.Color.White
 import scalafx.stage.Modality.ApplicationModal
@@ -122,19 +122,35 @@ object Main extends JFXApp3:
       imageView
 
     def interactableCardPopUp(card: Card): Unit =
-      val scene = new Scene:
+      popup(new Scene{
         content = new VBox:
+          padding = Insets(30)
+          border = new Border(new BorderStroke(White, BorderStrokeStyle.Solid, CornerRadii.Empty, BorderWidths.Default))
+          background = new Background(Array(new BackgroundFill(Color.Black, CornerRadii.Empty, Insets.Empty)))
           val image: ImageView = cardImageView(card, 0.8)
           val buttons: HBox = new HBox:
+            val cardCountUpdater: Runnable = () => cardCount.text = deck.countOf(card).toString
             val addButton: Button = new Button("+"):
-              onMouseClicked = _ => deckAdd(card)
+              onMouseClicked = _ => {
+                deckAdd(card)
+                runLater(cardCountUpdater)
+              }
+
+            val cardCount: Label = new Label("0"):
+              style = "-fx-text-fill: white;"
+              runLater(cardCountUpdater)
+
             val removeButton: Button = new Button("-"):
-              onMouseClicked = _ => deckRemove(card)
-            children = Seq(addButton, removeButton)
+              onMouseClicked = _ => {
+                deckRemove(card)
+                runLater(cardCountUpdater)
+              }
+            children = Seq(removeButton, cardCount, addButton)
             alignment = Pos.Center
-            spacing = 10
+            spacing = 40
+          spacing = 10
           children = Seq(image, buttons)
-      popup(scene)
+      })
 
     val searchBar: TextField = new TextField:
       promptText = "Search for a card..."

@@ -39,7 +39,7 @@ import scala.language.postfixOps
 import scala.util.{Failure, Success}
 
 private val TOP_SCROLLPANE_HEIGHT = 0.3
-private val BOTTOM_SCROLLPANE_HEIGHT = 0.35
+private val BOTTOM_SCROLLPANE_HEIGHT = 0.50
 
 val deck = new Deck
 
@@ -62,7 +62,7 @@ def deckBuilderTabContent(windowSize: Dimension): VBox =
           case Failure(_) => println("Failed to fetch cards")
         }
 
-      children = SimpleSearchBar(fetchCardsAndUpdate) :: SimpleButton("Clear Cache", _ => clearCache) :: Nil
+      children = SimpleSearchBar(fetchCardsAndUpdate, windowSize.getWidth * 0.5) :: SimpleButton("Clear Cache", _ => clearCache) :: Nil
     children = Seq(searchBarBox, searchResultsPane)
 
   val deckView: VBox = new VBox:
@@ -80,4 +80,5 @@ def deckBuilderTabContent(windowSize: Dimension): VBox =
     children = Seq(deckViewHeader, deckViewPane)
 
   new VBox:
+    style = s"-fx-background-color: $DARK_GRAY"
     children = List(searchView, Separator(Horizontal), deckView)

@@ -43,7 +43,7 @@ object CardFetcher:
       Card(data)
     }
 
-  def sanitizedQuery(query: String): String = query replaceAll(" ", "") replaceAll("[^a-zA-Z0-9']", "")
+  def sanitizedQuery(query: String): String = query replaceAll(" ", "") replaceAll("[^a-zA-Z0-9'-_]", "")
 
   //public method to fetch a card with its id
   def fetchCard(id: String): Future[Card] = fetchCardAsync(sanitizedQuery(id))

@@ -13,7 +13,7 @@ import scalafx.geometry.{Insets, Orientation}
 import scalafx.scene.Scene
 import scalafx.scene.control.ScrollPane.ScrollBarPolicy.Never
 import scalafx.scene.control.*
-import scalafx.scene.image.ImageView
+import scalafx.scene.image.{Image, ImageView}
 import scalafx.scene.input.ScrollEvent.Scroll
 import scalafx.scene.layout.*
 import scalafx.scene.layout.BorderStrokeStyle.Solid
@@ -22,7 +22,10 @@ import scalafx.stage.Modality.ApplicationModal
 import scalafx.stage.Stage
 import scalafx.stage.StageStyle.Undecorated
 
+import scala.collection.parallel.CollectionConverters.seqIsParallelizable
 import java.awt.Dimension
+import java.io.FileInputStream
+import scala.util.Try
 
 private val SCROLL_SPEED = 1.5
 
@@ -47,12 +50,13 @@ def SimpleSearchBar(search: String => Unit): HBox =
 
 def horizontalImageBoxScrollPane(verticalRatio: Double, windowSize: Dimension): ScrollPane =
   new ScrollPane:
-    val imageList: HBox = new HBox
+    val imageList: HBox = new HBox:
+      decorate(this, 10, 10)
+
     content = imageList
     prefViewportWidth = windowSize.width
     prefViewportHeight = windowSize.height * verticalRatio
     vbarPolicy = Never
-    style = "-fx-background-color: transparent; -fx-border-color: transparent;" // let the background show through
     fitToWidth = true
     fitToHeight = true
     addEventFilter(Scroll, (event: ScrollEvent) => {
@@ -62,6 +66,13 @@ def horizontalImageBoxScrollPane(verticalRatio: Double, windowSize: Dimension): 
       this.setHvalue(hValue - (deltaY / width))
     })
 
+
+def toDeckCardView(card: Card, deck: Deck, deckViewPane: ScrollPane, windowSize: Dimension): VBox =
+  new VBox:
+    decorate(this, 10, 10)
+    val image: ImageView = cardImageView(card, 0.25 * windowSize.height, _ => deckManagerCardWindow(card, deck, deckViewPane, windowSize))
+    val count: Label = Label(deck.countOf(card).toString)
+    children = Seq(image, count)
 
 def deckManagerCardWindow(card: Card, deck: Deck, deckViewPane: ScrollPane, windowSize: Dimension): Unit =
   def popup(content: Scene): Unit =
@@ -73,17 +84,12 @@ def deckManagerCardWindow(card: Card, deck: Deck, deckViewPane: ScrollPane, wind
       centerOnScreen()
       show()
 
-  val cardCount: Label = new Label("0"):
-    style = "-fx-text-fill: white;"
-  val cardCountUpdater: Runnable = () => cardCount.text = deck.countOf(card).toString
-
+  val cardCount: Label = SimpleLabel("-1", 50)
+  val updateCardCount: Runnable = () => cardCount.text = deck.countOf(card).toString
   def updateDeckView(): Unit =
-    def toDeckCardView(card: Card): ImageView =
-      cardImageView(card, 0.25, windowSize, _ => deckManagerCardWindow(card, deck, deckViewPane, windowSize))
-
     runLater {
-      getContent(deckViewPane).children = deck.all map toDeckCardView
-      cardCountUpdater
+      getContent(deckViewPane).children = deck.all.distinct map (toDeckCardView(_, deck, deckViewPane, windowSize))
+      updateCardCount
     }
 
   def deckAdd(card: Card): Unit =
@@ -96,21 +102,44 @@ def deckManagerCardWindow(card: Card, deck: Deck, deckViewPane: ScrollPane, wind
 
   popup(new Scene {
     content = new VBox:
-      val image: ImageView = cardImageView(card, 0.8, windowSize, _ => ())
+      decorate(this, 10, 10)
+      val image: ImageView = cardImageView(card, 0.8 * windowSize.height, _ => ())
       val buttons: HBox = new HBox:
+        decorate(this, 10, 10)
         val addButton: Button = SimpleButton("+", _ => deckAdd(card))
         val removeButton: Button = SimpleButton("-", _ => deckRemove(card))
         children = Seq(removeButton, cardCount, addButton)
       children = Seq(image, buttons)
-      runLater(cardCountUpdater)
+      runLater(updateCardCount)
   })
 
 // have to specify type because of type erasure
 def getContent(scrollPane: ScrollPane): HBox = scrollPane.content.value.asInstanceOf[javafx.scene.layout.HBox]
 
-def cardImageView(card: Card, scale: Double, windowSize: Dimension, eventHandler: EventHandler[_ >: MouseEvent]): ImageView =
-  new ImageView(card.getImg):
-    fitHeight = windowSize.height * scale
+def cardImageView(card: Card, size: Double, eventHandler: EventHandler[_ >: MouseEvent]): ImageView =
+  val cardImage = Try(card.getImg).toOption match
+    case Some(i) => i
+    case None => Image(FileInputStream("C:\\Users\\usr\\IdeaProjects\\PTCGToolScalaEdition\\src\\resources\\emptyCard.png"))
+  new ImageView(cardImage):
+    fitHeight = size
     preserveRatio = true
     onMouseClicked = eventHandler
+
+
+// add padding, spacing and center alignment to a VBox or HBox
+def decorate(box: HBox, padding: Double, spacing: Double): Unit =
+  box.padding = Insets(padding)
+  box.spacing = spacing
+  box.alignment = Center
+
+def decorate(box: VBox, padding: Double, spacing: Double): Unit =
+  box.padding = Insets(padding)
+  box.spacing = spacing
+  box.alignment = Center
+
+// label with a certain text and size
+def SimpleLabel(text: String, size: Double): Label =
+  new Label(text):
+    style = s"-fx-font-size: ${size}px"
+
 

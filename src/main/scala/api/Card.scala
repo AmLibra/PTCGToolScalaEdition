@@ -10,6 +10,7 @@ import scalafx.scene.image.Image
 
 import java.io.{File, FileInputStream}
 import java.net.URL
+import scala.util.Try
 
 // fields need default values for json4s to work therefore they are all Option
 case class Card(name: Option[String],
@@ -63,7 +64,7 @@ case class Card(name: Option[String],
       saveImage(getLargeImageUrl, imgDir)
       println("--> Done fetching: " + this + "!")
     }
-    Image(FileInputStream(imgDir))
+    Image(Try(FileInputStream(imgDir)).getOrElse(throw new Exception("Could not load image for " + this)))
 
   // override toString method to print the name of the card and its id
   override def toString: String = name.getOrElse("No name found") + " (" + id.getOrElse("No id found") + ")"

@@ -2,7 +2,7 @@ package ptcgtool
 package tabs
 
 import api.CardFetcher.fetchCards
-import api.IOTools.clearCache
+import api.IOTools.{clearCache, readDeck, readDeckFolder, saveDeck}
 import api.{Card, CardFetcher}
 import objects.Deck
 import tabs.deckBuilderTabContent
@@ -49,9 +49,10 @@ def deckBuilderTabContent(windowSize: Dimension): VBox =
 
   val searchView: VBox = new VBox:
     val searchBarBox: HBox = new HBox:
+      decorate(this, 20, 30)
       def fetchCardsAndUpdate(query: String): Unit =
         def toSearchResultsView(card: Card): ImageView =
-          cardImageView(card, 0.28, windowSize, _ => deckManagerCardWindow(card, deck, deckViewPane, windowSize))
+          cardImageView(card, 0.28 * windowSize.height, _ => deckManagerCardWindow(card, deck, deckViewPane, windowSize))
 
         def updateSearchResultsPane(cards: Seq[Card]): Unit =
           runLater(getContent(searchResultsPane).children = cards.par map toSearchResultsView seq)
@@ -65,8 +66,17 @@ def deckBuilderTabContent(windowSize: Dimension): VBox =
     children = Seq(searchBarBox, searchResultsPane)
 
   val deckView: VBox = new VBox:
+    val deckName: String = readDeckFolder.head
+    readDeck(deckName).all foreach deck.add
+    runLater {
+      getContent(deckViewPane).children = deck.all.distinct map(toDeckCardView(_, deck, deckViewPane, windowSize))
+    }
+
     val deckViewHeader: HBox = new HBox:
-      children = Label("Deck") :: new TextField :: Button("Save Deck") :: Nil
+      decorate(this, 20, 30)
+      children = Label("Deck: ") ::
+        SimpleLabel(deckName.dropRight(".deck".length), 50) ::
+        SimpleButton("Save Deck", _ => saveDeck("test", deck)) :: Nil
     children = Seq(deckViewHeader, deckViewPane)
 
   new VBox:

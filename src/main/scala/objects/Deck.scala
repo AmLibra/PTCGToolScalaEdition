@@ -16,6 +16,10 @@ final class Deck:
   private var cards: List[Card] = List.empty[Card]
   private def size: Int = cards.size
 
+  def this(cards: Seq[Card]) =
+    this()
+    this.cards = cards.toList
+
   def countOf(card: Card): Int = cards.count(_ == card)
 
   def countOf(cardName: String): Int = cards.count(_.name.get == cardName)
@@ -32,6 +36,12 @@ final class Deck:
 
   // add a card to the deck
   def add(card: Card): Unit = cards = card :: cards
+
+  // add multiple cards to the deck
+  def add(cards: Seq[Card]): Unit = cards.foreach(add)
+
+  // add a certain amount of cards to the deck
+  def add(card: Card, amount: Int): Unit = (1 to amount).foreach(_ => add(card))
 
   // remove a card from the deck
   def remove(card: Card): Unit = cards = cards.diff(List(card))
@@ -80,26 +90,3 @@ final class Deck:
     pokemonHeader + s"$pokemonLines\n" +
       trainerHeader + s"$trainerLines\n" +
       energyHeader + s"$energyLines"
-
-  private def parseCardLine(line: String): Future[Card] =
-    val Array(_, _, id) = line.split(" ")
-    fetchCard(id)
-
-  def parseDeck(deckString: String): Deck =
-    var deck: Deck = new Deck
-    val lines = deckString.split("\n")
-    // remove the first line, which is the deck name
-    val cardLines = lines.drop(1)
-    // remove the header lines, all valid lines should start with a number
-    val validCardLines = cardLines.filter(_.head.isDigit)
-    val cards = validCardLines.map(parseCardLine).toSeq
-    Future.sequence(cards).onComplete {
-      case Success(cards) => cards.foreach(deck.add)
-      case Failure(exception) => println(exception)
-    }
-    deck
-
-
-
-
-

@@ -40,16 +40,32 @@ object Main extends JFXApp3:
   private final val DECK_BUILDING_TAB_NAME = "Deck Builder"
   private final val STATS_TAB_NAME = "Stats"
 
+  private val LIGHT_GRAY = "#000000"
+  private val DARK_GRAY = "#2b2b2b"
+  private val WHITE = "#ffffff"
+
+  private val TAB_STYLE = s"-fx-background-color: $DARK_GRAY; -fx-focus-color: transparent; -fx-faint-focus-color: transparent;"
+
   override def start(): Unit =
     println("Starting GUI...")
     new PrimaryStage:
       title = APP_NAME
       scene = new Scene(WINDOW_SIZE.width, WINDOW_SIZE.height):
         val deckBuilderTab: Tab = new Tab:
-          text = DECK_BUILDING_TAB_NAME
+          style = TAB_STYLE
+          val label = new Label(DECK_BUILDING_TAB_NAME):
+            style = s"-fx-text-fill: $WHITE; -fx-font-size: 20; -fx-font-weight: bold; -fx-font-family: \"Arial\" "
+          graphic = label
+          text = "\t"
           content = deckBuilderTabContent(WINDOW_SIZE)
         val statsTab: Tab = new Tab:
-          text = STATS_TAB_NAME
+          style = TAB_STYLE
+          val label = new Label(STATS_TAB_NAME):
+            style = s"-fx-text-fill: $WHITE; -fx-font-size: 20; -fx-font-weight: bold; -fx-font-family: \"Arial\" "
+          graphic = label
+          text = "\t"
           content = statsTabContent(WINDOW_SIZE)
         root = new TabPane:
+          tabClosingPolicy = TabPane.TabClosingPolicy.Unavailable
+          style = s"-fx-background: $DARK_GRAY"
           tabs = List(deckBuilderTab, statsTab)

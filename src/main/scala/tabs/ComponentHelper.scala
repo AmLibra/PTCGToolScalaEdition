@@ -13,11 +13,13 @@ import scalafx.geometry.{Insets, Orientation}
 import scalafx.scene.Scene
 import scalafx.scene.control.ScrollPane.ScrollBarPolicy.Never
 import scalafx.scene.control.*
+import scalafx.scene.effect.{BlurType, DropShadow}
 import scalafx.scene.image.{Image, ImageView}
 import scalafx.scene.input.ScrollEvent.Scroll
 import scalafx.scene.layout.*
 import scalafx.scene.layout.BorderStrokeStyle.Solid
-import scalafx.scene.paint.Color.{Black, Transparent, White}
+import scalafx.scene.paint.Color
+import scalafx.scene.paint.Color.{Black, Transparent, White, color}
 import scalafx.stage.Modality.ApplicationModal
 import scalafx.stage.{Stage, StageStyle}
 import scalafx.stage.StageStyle.{TRANSPARENT, Undecorated}
@@ -30,23 +32,34 @@ import scala.util.Try
 private val SCROLL_SPEED = 1.5
 
 private val DARK_GRAY = "#2b2b2b"
+private val LIGHTER_GRAY = "#3b3b3b"
 
-def Separator(o: Orientation): Separator =
+def SimpleSeparator(o: Orientation): Separator =
   new Separator:
     orientation = o
+    style = s"-fx-background: $DARK_GRAY; -fx-border-color: transparent; -fx-border-width: 0; "
+
+// label with a certain text and size
+def SimpleLabel(text: String, size: Double): Label =
+  new Label(text):
+    style = s"-fx-font-size: ${size}px; -fx-font-size: 20; -fx-font-weight: bold; -fx-font-family: \"Arial\" "
 
 def SimpleButton(text: String, eventHandler: EventHandler[_ >: MouseEvent]): Button =
   new Button(text):
     onMouseClicked = eventHandler
-    // no blue border on click
     style = "fx-focus-color: transparent; -fx-faint-focus-color: transparent; -fx-background-insets: 0;"
-    + s"-fx-font-size: 20; -fx-font-weight: bold; -fx-font-family: \"Arial\" "
+    + s"-fx-font-size: 20; -fx-font-weight: bold; -fx-font-family: \"Arial\"; -fx-background-color: $DARK_GRAY; " +
+      "-fx-text-fill: white; -fx-border-color: transparent; -fx-border-width: 0; -fx-background-radius: 0;"
+    // change color temporarily when mouse is over button
+    onMouseEntered = _ => style = style.value + s"-fx-background-color: $LIGHTER_GRAY;"
+    onMouseExited = _ => style = style.value.replace(s"-fx-background-color: $LIGHTER_GRAY;", "")
+
 
 def SimpleSearchBar(search: String => Unit, size: Double): HBox =
   def SimpleSearchField(search: String => Unit): TextField =
     new TextField:
       style = "fx-focus-color: transparent; -fx-faint-focus-color: transparent; -fx-background-insets: 0; " +
-        "-fx-background-radius: 0; -fx-background-color: transparent; -fx-text-fill: white; -fx-font-size: 20; " +
+        s"-fx-background-radius: 0; -fx-background-color: $LIGHTER_GRAY; -fx-text-fill: white; -fx-font-size: 20; " +
         "-fx-font-weight: bold; -fx-font-family: \"Arial\"; -fx-prompt-text-fill: white; -fx-prompt-text-font-size: 20; " +
         "-fx-prompt-text-font-weight: bold; -fx-prompt-text-font-family: \"Arial\";"
       promptText = "Search for a card..."
@@ -64,6 +77,8 @@ def horizontalImageBoxScrollPane(verticalRatio: Double, windowSize: Dimension): 
     style = s"-fx-background-color: $DARK_GRAY; -fx-background: $DARK_GRAY; -fx-control-inner-background: $DARK_GRAY; "
     val imageList: HBox = new HBox:
       decorate(this, 10, 10)
+      // remove top and bottom padding
+      padding = Insets(0, 0, 0, 0)
       style = s"-fx-background-color: $DARK_GRAY "
     content = imageList
     prefViewportWidth = windowSize.width
@@ -97,7 +112,9 @@ def deckManagerCardWindow(card: Card, deck: Deck, deckViewPane: ScrollPane, wind
       centerOnScreen()
       show()
 
-  val cardCount: Label = SimpleLabel("-1", 50)
+  val cardCount: Label = SimpleLabel(deck.countOf(card).toString, 50)
+  cardCount.setStyle("-fx-font-size: 50; -fx-font-weight: bold; -fx-font-family: \"Arial\"; -fx-text-fill: white; " +
+    "-fx-effect: dropshadow(gaussian, black, 7, 1, 0, 0);")
   val updateCardCount: Runnable = () => cardCount.text = deck.countOf(card).toString
   def updateDeckView(): Unit =
     runLater {
@@ -120,10 +137,7 @@ def deckManagerCardWindow(card: Card, deck: Deck, deckViewPane: ScrollPane, wind
       // transparent background
       style = "-fx-background-color: transparent"
       val cardImage: ImageView = cardImageView(card, 0.8 * windowSize.height, _ => ())
-      val cardCount: Label = SimpleLabel(deck.countOf(card).toString, 50)
-      cardCount.setStyle("-fx-font-size: 50; -fx-font-weight: bold; -fx-font-family: \"Arial\"; -fx-text-fill: white; " +
-        // text has a black border
-        "-fx-stroke: black; -fx-stroke-width: 1; -fx-stroke-type: outside; " )
+      cardImage.setEffect(new DropShadow(BlurType.Gaussian, Black, 20, 0.5, 0, 0))
       val cardAdd: Button = SimpleButton("+", _ => deckAdd(card))
       val cardRemove: Button = SimpleButton("-", _ => deckRemove(card))
       val cardCountBox: HBox = new HBox:
@@ -135,6 +149,7 @@ def deckManagerCardWindow(card: Card, deck: Deck, deckViewPane: ScrollPane, wind
       AnchorPane.setBottomAnchor(cardCountBox, -20.0)
       AnchorPane.setLeftAnchor(cardCountBox, 0.0)
       AnchorPane.setRightAnchor(cardCountBox, 0.0)
+      runLater(updateCardCount)
     content = anchor
   })
 
@@ -150,27 +165,22 @@ def cardImageView(card: Card, size: Double, eventHandler: EventHandler[_ >: Mous
     preserveRatio = true
     onMouseClicked = eventHandler
 
+val BOX_STYLE = s"-fx-background-color: $DARK_GRAY ; -fx-background: transparent; -fx-control-inner-background: transparent; " +
+  "-fx-focus-color: transparent; -fx-faint-focus-color: transparent; -fx-background-insets: 0; -fx-background-radius: 0; " +
+  "-fx-border-color: transparent; -fx-border-width: 0; -fx-border-radius: 0; -fx-border-insets: 0; -fx-border-style: solid; "
 
 // add padding, spacing and center alignment to a VBox or HBox
 def decorate(box: HBox, padding: Double, spacing: Double): Unit =
-  box.style = s"-fx-background-color: $DARK_GRAY ; -fx-background: transparent; -fx-control-inner-background: transparent; " +
-    "-fx-focus-color: transparent; -fx-faint-focus-color: transparent; -fx-background-insets: 0; -fx-background-radius: 0; " +
-    "-fx-border-color: transparent; -fx-border-width: 0; -fx-border-radius: 0; -fx-border-insets: 0; -fx-border-style: solid; "
+  box.style = BOX_STYLE
   box.padding = Insets(padding)
   box.spacing = spacing
   box.alignment = Center
 
 def decorate(box: VBox, padding: Double, spacing: Double): Unit =
-  box.style = s"-fx-background-color: $DARK_GRAY ; -fx-background: transparent; -fx-control-inner-background: transparent; " +
-    "-fx-focus-color: transparent; -fx-faint-focus-color: transparent; -fx-background-insets: 0; -fx-background-radius: 0; " +
-    "-fx-border-color: transparent; -fx-border-width: 0; -fx-border-radius: 0; -fx-border-insets: 0; -fx-border-style: solid; "
+  box.style = BOX_STYLE
   box.padding = Insets(padding)
   box.spacing = spacing
   box.alignment = Center
 
-// label with a certain text and size
-def SimpleLabel(text: String, size: Double): Label =
-  new Label(text):
-    style = s"-fx-font-size: ${size}px; -fx-font-size: 20; -fx-font-weight: bold; -fx-font-family: \"Arial\" "
 
 

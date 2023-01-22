@@ -38,7 +38,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.language.postfixOps
 import scala.util.{Failure, Success}
 
-private val TOP_SCROLLPANE_HEIGHT = 0.3
+private val TOP_SCROLLPANE_HEIGHT = 0.45
 private val BOTTOM_SCROLLPANE_HEIGHT = 0.50
 
 val deck = new Deck
@@ -52,7 +52,7 @@ def deckBuilderTabContent(windowSize: Dimension): VBox =
       decorate(this, 20, 30)
       def fetchCardsAndUpdate(query: String): Unit =
         def toSearchResultsView(card: Card): ImageView =
-          cardImageView(card, 0.28 * windowSize.height, _ => deckManagerCardWindow(card, deck, deckViewPane, windowSize))
+          cardImageView(card, 0.35 * windowSize.height, _ => deckManagerCardWindow(card, deck, deckViewPane, windowSize))
 
         def updateSearchResultsPane(cards: Seq[Card]): Unit =
           runLater(getContent(searchResultsPane).children = cards.par map toSearchResultsView seq)
@@ -74,11 +74,11 @@ def deckBuilderTabContent(windowSize: Dimension): VBox =
 
     val deckViewHeader: HBox = new HBox:
       decorate(this, 20, 30)
-      children = Label("Deck: ") ::
+      children = SimpleLabel("Deck: ", 50) ::
         SimpleLabel(deckName.dropRight(".deck".length), 50) ::
         SimpleButton("Save Deck", _ => saveDeck("test", deck)) :: Nil
     children = Seq(deckViewHeader, deckViewPane)
 
   new VBox:
     style = s"-fx-background-color: $DARK_GRAY"
-    children = List(searchView, Separator(Horizontal), deckView)
+    children = List(searchView, SimpleSeparator(Horizontal), deckView)

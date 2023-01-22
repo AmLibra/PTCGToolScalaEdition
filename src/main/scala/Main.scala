@@ -1,6 +1,5 @@
 package ptcgtool
 
-import api.CardFetcher.fetchCards
 import api.IOTools.clearCache
 import api.{Card, CardFetcher}
 import objects.Deck
@@ -46,23 +45,21 @@ object Main extends JFXApp3:
 
   private val TAB_STYLE = s"-fx-background-color: $DARK_GRAY; -fx-focus-color: transparent; -fx-faint-focus-color: transparent;"
 
+  private def TabLabel(text: String): Label = new Label(text):
+    style = s"-fx-text-fill: $WHITE; -fx-font-size: 20; -fx-font-weight: bold; -fx-font-family: \"Arial\" "
+
   override def start(): Unit =
-    println("Starting GUI...")
     new PrimaryStage:
       title = APP_NAME
       scene = new Scene(WINDOW_SIZE.width, WINDOW_SIZE.height):
         val deckBuilderTab: Tab = new Tab:
           style = TAB_STYLE
-          val label = new Label(DECK_BUILDING_TAB_NAME):
-            style = s"-fx-text-fill: $WHITE; -fx-font-size: 20; -fx-font-weight: bold; -fx-font-family: \"Arial\" "
-          graphic = label
+          graphic = TabLabel(DECK_BUILDING_TAB_NAME)
           text = "\t"
           content = deckBuilderTabContent(WINDOW_SIZE)
         val statsTab: Tab = new Tab:
           style = TAB_STYLE
-          val label = new Label(STATS_TAB_NAME):
-            style = s"-fx-text-fill: $WHITE; -fx-font-size: 20; -fx-font-weight: bold; -fx-font-family: \"Arial\" "
-          graphic = label
+          graphic = TabLabel(STATS_TAB_NAME)
           text = "\t"
           content = statsTabContent(WINDOW_SIZE)
         root = new TabPane:

@@ -20,6 +20,10 @@ final class Deck:
     this()
     this.cards = cards.toList
 
+  def this(cardsAndAmounts: Map[Card, Int]) =
+    this()
+    cardsAndAmounts.foreach { case (card, amount) => add(card, amount) }
+
   def countOf(card: Card): Int = cards.count(_ == card)
 
   def countOf(cardName: String): Int = cards.count(_.name.get == cardName)
@@ -42,6 +46,9 @@ final class Deck:
 
   // add a certain amount of cards to the deck
   def add(card: Card, amount: Int): Unit = (1 to amount).foreach(_ => add(card))
+
+  def add(cardsAndAmounts: Map[Card, Int]): Unit =
+    cardsAndAmounts.foreach { case (card, amount) => add(card, amount) }
 
   // remove a card from the deck
   def remove(card: Card): Unit = cards = cards.diff(List(card))

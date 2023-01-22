@@ -4,15 +4,21 @@ package tabs
 import api.Card
 import objects.Deck
 
+import javafx.animation.{KeyFrame, KeyValue, PauseTransition, Timeline}
+import javafx.concurrent.Task
 import javafx.event.EventHandler
 import javafx.scene.input.{MouseEvent, ScrollEvent}
+import javafx.util.Duration
 import scalafx.Includes.jfxHBox2sfx
+import scalafx.animation.Interpolator.EaseBoth
+import scalafx.animation.Timeline.Indefinite
+import scalafx.animation.{Animation, AnimationTimer, Interpolator}
 import scalafx.application.Platform.runLater
 import scalafx.geometry.Pos.Center
 import scalafx.geometry.{Insets, Orientation}
 import scalafx.scene.Scene
-import scalafx.scene.control.ScrollPane.ScrollBarPolicy.Never
 import scalafx.scene.control.*
+import scalafx.scene.control.ScrollPane.ScrollBarPolicy.Never
 import scalafx.scene.effect.{BlurType, DropShadow}
 import scalafx.scene.image.{Image, ImageView}
 import scalafx.scene.input.ScrollEvent.Scroll
@@ -21,18 +27,29 @@ import scalafx.scene.layout.BorderStrokeStyle.Solid
 import scalafx.scene.paint.Color
 import scalafx.scene.paint.Color.{Black, Transparent, White, color}
 import scalafx.stage.Modality.ApplicationModal
-import scalafx.stage.{Stage, StageStyle}
 import scalafx.stage.StageStyle.{TRANSPARENT, Undecorated}
+import scalafx.stage.{Stage, StageStyle}
+import scalafx.Includes.jfxTask2sfxTask
 
-import scala.collection.parallel.CollectionConverters.seqIsParallelizable
 import java.awt.Dimension
 import java.io.FileInputStream
+import scala.collection.parallel.CollectionConverters.seqIsParallelizable
+import scala.language.postfixOps
 import scala.util.Try
 
 private val SCROLL_SPEED = 1.5
 
 private val DARK_GRAY = "#2b2b2b"
 private val LIGHTER_GRAY = "#3b3b3b"
+private val TRANSPARENT = "transparent"
+
+def backgroundIs(color: String): String = s"-fx-background-color: $color; -fx-background: $color"
+
+private val EMPTY_CARD = Image(FileInputStream("C:\\Users\\usr\\IdeaProjects\\PTCGToolScalaEdition\\src\\resources\\emptyCard.png"))
+
+val BOX_STYLE = s"-fx-background-color: $DARK_GRAY; -fx-control-inner-background: transparent; " +
+  "-fx-focus-color: transparent; -fx-faint-focus-color: transparent; -fx-background-insets: 0; -fx-background-radius: 0; " +
+  "-fx-border-color: transparent; -fx-border-width: 0; -fx-border-radius: 0; -fx-border-insets: 0; -fx-border-style: solid; "
 
 def SimpleSeparator(o: Orientation): Separator =
   new Separator:
@@ -47,8 +64,18 @@ def SimpleLabel(text: String, size: Double): Label =
 def SimpleButton(text: String, eventHandler: EventHandler[_ >: MouseEvent]): Button =
   new Button(text):
     onMouseClicked = eventHandler
-    style = "fx-focus-color: transparent; -fx-faint-focus-color: transparent; -fx-background-insets: 0;"
-    + s"-fx-font-size: 20; -fx-font-weight: bold; -fx-font-family: \"Arial\"; -fx-background-color: $DARK_GRAY; " +
+    style = "fx-focus-color: transparent; -fx-faint-focus-color: transparent; -fx-background-insets: 0;" +
+    s"-fx-font-size: 20; -fx-font-weight: bold; -fx-font-family: \"Arial\"; -fx-background-color: $DARK_GRAY; " +
+      "-fx-text-fill: white; -fx-border-color: transparent; -fx-border-width: 0; -fx-background-radius: 0;"
+    // change color temporarily when mouse is over button
+    onMouseEntered = _ => style = style.value + s"-fx-background-color: $LIGHTER_GRAY;"
+    onMouseExited = _ => style = style.value.replace(s"-fx-background-color: $LIGHTER_GRAY;", "")
+
+def SimpleToggleButton(text: String, eventHandler: EventHandler[_ >: MouseEvent]): ToggleButton =
+  new ToggleButton(text):
+    onMouseClicked = eventHandler
+    style = "fx-focus-color: transparent; -fx-faint-focus-color: transparent; -fx-background-insets: 0;" +
+    s"-fx-font-size: 20; -fx-font-weight: bold; -fx-font-family: \"Arial\"; -fx-background-color: $DARK_GRAY; " +
       "-fx-text-fill: white; -fx-border-color: transparent; -fx-border-width: 0; -fx-background-radius: 0;"
     // change color temporarily when mouse is over button
     onMouseEntered = _ => style = style.value + s"-fx-background-color: $LIGHTER_GRAY;"
@@ -73,12 +100,11 @@ def SimpleSearchBar(search: String => Unit, size: Double): HBox =
 
 def horizontalImageBoxScrollPane(verticalRatio: Double, windowSize: Dimension): ScrollPane =
   new ScrollPane:
-    // make the scroll bar invisible
     style = s"-fx-background-color: $DARK_GRAY; -fx-background: $DARK_GRAY; -fx-control-inner-background: $DARK_GRAY; "
     val imageList: HBox = new HBox:
       decorate(this, 10, 10)
       // remove top and bottom padding
-      padding = Insets(0, 0, 0, 0)
+      padding = Insets(0, 20, 0, 20)
       style = s"-fx-background-color: $DARK_GRAY "
     content = imageList
     prefViewportWidth = windowSize.width
@@ -94,13 +120,19 @@ def horizontalImageBoxScrollPane(verticalRatio: Double, windowSize: Dimension): 
       this.setHvalue(hValue - (deltaY / width))
     })
 
-
 def toDeckCardView(card: Card, deck: Deck, deckViewPane: ScrollPane, windowSize: Dimension): VBox =
   new VBox:
     decorate(this, 10, 10)
     val image: ImageView = cardImageView(card, 0.25 * windowSize.height, _ => deckManagerCardWindow(card, deck, deckViewPane, windowSize))
+    zoomOnHover(image)
     val count: Label = Label(deck.countOf(card).toString)
     children = Seq(image, count)
+
+def updateDeckViewPane(deck: Deck, deckViewPane: ScrollPane, windowSize: Dimension, runnable: Runnable): Unit =
+  runLater {
+    getContent(deckViewPane).children = deck.all.distinct map (toDeckCardView(_, deck, deckViewPane, windowSize))
+    runnable.run()
+  }
 
 def deckManagerCardWindow(card: Card, deck: Deck, deckViewPane: ScrollPane, windowSize: Dimension): Unit =
   def popup(content: Scene): Unit =
@@ -116,6 +148,7 @@ def deckManagerCardWindow(card: Card, deck: Deck, deckViewPane: ScrollPane, wind
   cardCount.setStyle("-fx-font-size: 50; -fx-font-weight: bold; -fx-font-family: \"Arial\"; -fx-text-fill: white; " +
     "-fx-effect: dropshadow(gaussian, black, 7, 1, 0, 0);")
   val updateCardCount: Runnable = () => cardCount.text = deck.countOf(card).toString
+
   def updateDeckView(): Unit =
     runLater {
       getContent(deckViewPane).children = deck.all.distinct map (toDeckCardView(_, deck, deckViewPane, windowSize))
@@ -131,10 +164,8 @@ def deckManagerCardWindow(card: Card, deck: Deck, deckViewPane: ScrollPane, wind
     updateDeckView()
 
   popup(new Scene {
-    // transparent background
-    fill = Transparent
-    val anchor = new AnchorPane:
-      // transparent background
+    fill = Transparent 
+    content = new AnchorPane:
       style = "-fx-background-color: transparent"
       val cardImage: ImageView = cardImageView(card, 0.8 * windowSize.height, _ => ())
       cardImage.setEffect(new DropShadow(BlurType.Gaussian, Black, 20, 0.5, 0, 0))
@@ -150,24 +181,35 @@ def deckManagerCardWindow(card: Card, deck: Deck, deckViewPane: ScrollPane, wind
       AnchorPane.setLeftAnchor(cardCountBox, 0.0)
       AnchorPane.setRightAnchor(cardCountBox, 0.0)
       runLater(updateCardCount)
-    content = anchor
   })
 
 // have to specify type because of type erasure
 def getContent(scrollPane: ScrollPane): HBox = scrollPane.content.value.asInstanceOf[javafx.scene.layout.HBox]
 
 def cardImageView(card: Card, size: Double, eventHandler: EventHandler[_ >: MouseEvent]): ImageView =
-  val cardImage = Try(card.getImg).toOption match
+  val smallCardImage = Try(card.getSmallImage).toOption match
     case Some(i) => i
-    case None => Image(FileInputStream("C:\\Users\\usr\\IdeaProjects\\PTCGToolScalaEdition\\src\\resources\\emptyCard.png"))
-  new ImageView(cardImage):
+    case None => EMPTY_CARD
+
+  val imageView = new ImageView(smallCardImage):
     fitHeight = size
     preserveRatio = true
     onMouseClicked = eventHandler
 
-val BOX_STYLE = s"-fx-background-color: $DARK_GRAY ; -fx-background: transparent; -fx-control-inner-background: transparent; " +
-  "-fx-focus-color: transparent; -fx-faint-focus-color: transparent; -fx-background-insets: 0; -fx-background-radius: 0; " +
-  "-fx-border-color: transparent; -fx-border-width: 0; -fx-border-radius: 0; -fx-border-insets: 0; -fx-border-style: solid; "
+  val loadLargeImageTask = new Task[Image]:
+    override def call(): Image =
+      Try(card.getLargeImage).toOption match
+        case Some(i) => i
+        case None => EMPTY_CARD
+
+  loadLargeImageTask.valueProperty.addListener( _ => {
+    if loadLargeImageTask.value != null && loadLargeImageTask.isDone then
+      runLater(imageView.image = loadLargeImageTask.value.get)
+  })
+
+  loadLargeImageTask.run()
+
+  imageView
 
 // add padding, spacing and center alignment to a VBox or HBox
 def decorate(box: HBox, padding: Double, spacing: Double): Unit =
@@ -181,6 +223,29 @@ def decorate(box: VBox, padding: Double, spacing: Double): Unit =
   box.padding = Insets(padding)
   box.spacing = spacing
   box.alignment = Center
+
+
+def zoomOnHover(imageView: ImageView): Unit = {
+  val initialSize = imageView.getFitHeight
+  val maxSize = initialSize * 1.1
+  val zoomInTimeline = new Timeline(
+    new KeyFrame(Duration.seconds(0.1), new KeyValue(imageView.fitHeightProperty(), maxSize, EaseBoth))
+  )
+  val zoomOutTransition = new PauseTransition(Duration.seconds(0.05))
+  zoomOutTransition.setOnFinished(_ => new Timeline(
+    new KeyFrame(Duration.seconds(0.1), new KeyValue(imageView.fitHeightProperty(), initialSize, EaseBoth))
+  ).play())
+
+  imageView.setOnMouseEntered(_ => {
+    zoomInTimeline.stop()
+    zoomInTimeline.play()
+  })
+
+  imageView.setOnMouseExited(_ => {
+    zoomInTimeline.stop()
+    zoomOutTransition.play()
+  })
+}
 
 
 

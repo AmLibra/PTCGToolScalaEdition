@@ -2,7 +2,7 @@ package ptcgtool
 package api
 
 import api.*
-import api.IOTools.{CACHED_FILES_LOCATION, IMAGE_FILE_EXTENSION, saveImage}
+import api.IOTools.{CACHED_FILES_LOCATION, IMAGE_FILE_EXTENSION, LARGE_IMAGE_FILE_EXTENSION, SMALL_IMAGE_FILE_EXTENSION, saveImage}
 
 import org.json4s.*
 import org.json4s.native.Serialization
@@ -46,7 +46,9 @@ case class Card(name: Option[String],
 
   def isStandardLegal: Boolean = legalities.exists(_.standard.get == "Legal")
 
-  def getLargeImageUrl: URL = URL(images.flatMap(_.large).getOrElse(throw new Exception("No large image found")))
+  private def getLargeImageUrl: URL = URL(images.flatMap(_.large).getOrElse(throw new Exception("No large image found")))
+
+  private def getSmallImageUrl: URL = URL(images.flatMap(_.small).getOrElse(throw new Exception("No small image found")))
 
   def getId: String = id.getOrElse(throw new Exception("No id found"))
 
@@ -57,14 +59,28 @@ case class Card(name: Option[String],
    *
    * @return the string that can be used to load the image in ImagePanel
    */
-  def getImg: Image =
-    val imgDir = CACHED_FILES_LOCATION + getId + IMAGE_FILE_EXTENSION
-    if (!File(imgDir).isFile) { // checks if the file exists and is not corrupted
-      println("Image for " + this + " not found in cache. Downloading...")
+  def getLargeImage: Image =
+    val imgDir = CACHED_FILES_LOCATION + getId + LARGE_IMAGE_FILE_EXTENSION
+    if (!File(imgDir).isFile)  // checks if the file exists and is not corrupted
       saveImage(getLargeImageUrl, imgDir)
-      println("--> Done fetching: " + this + "!")
-    }
-    Image(Try(FileInputStream(imgDir)).getOrElse(throw new Exception("Could not load image for " + this)))
+    Image(Try(FileInputStream(imgDir)).getOrElse(throw Exception("Could not load large image for " + this)))
+
+  def getSmallImage: Image =
+    if checkImage != null then return checkImage
+    val imgDir = CACHED_FILES_LOCATION + getId + SMALL_IMAGE_FILE_EXTENSION
+    if (!File(imgDir).isFile)  // checks if the file exists and is not corrupted
+      saveImage(getSmallImageUrl, imgDir)
+    Image(Try(FileInputStream(imgDir)).getOrElse(throw Exception("Could not load small image for " + this)))
+
+  private def checkImage: Image =
+    val imgDirLarge = CACHED_FILES_LOCATION + getId + LARGE_IMAGE_FILE_EXTENSION
+    val imgDirSmall = CACHED_FILES_LOCATION + getId + SMALL_IMAGE_FILE_EXTENSION
+    if(File(imgDirLarge).isFile)
+      Image(Try(FileInputStream(imgDirLarge)) getOrElse(throw Exception("Could not load small image for " + this)))
+    else if(File(imgDirSmall).isFile)
+      Image(Try(FileInputStream(imgDirSmall)) getOrElse(throw Exception("Could not load small image for " + this)))
+    else
+      null
 
   // override toString method to print the name of the card and its id
   override def toString: String = name.getOrElse("No name found") + " (" + id.getOrElse("No id found") + ")"

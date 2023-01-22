@@ -17,6 +17,11 @@ import scala.concurrent.{Await, Future}
 import scala.io.Source
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try, Using}
+import collection.parallel.CollectionConverters.ImmutableSeqIsParallelizable
+import collection.parallel.CollectionConverters.ImmutableIterableIsParallelizable
+import collection.parallel.CollectionConverters.seqIsParallelizable
+import collection.parallel.CollectionConverters.IterableIsParallelizable
+import scala.IArray.unzip
 
 // Bunch of syntax sugar for working with files
 private def stream(fromURl: URL): InputStream = fromURl openStream
@@ -33,6 +38,8 @@ private def ensureIsCreated(folder: File): Boolean =
 // IOTools class is static and is a collection of methods for working with Input/Output
 object IOTools:
   val CACHED_FILES_LOCATION: String = System.getProperty("user.dir") + "\\src\\resources\\cache\\images\\"
+  val SMALL_IMAGE_FILE_EXTENSION = "_small.png"
+  val LARGE_IMAGE_FILE_EXTENSION = "_large.png"
   val IMAGE_FILE_EXTENSION = ".png"
   private val DECKS_LOCATION: String = System.getProperty("user.dir") + "\\src\\resources\\decks\\"
   private val DECK_FILE_EXTENSION = ".deck"
@@ -90,7 +97,7 @@ object IOTools:
     val deckFile = File(DECKS_LOCATION + name)
     val reader = new BufferedReader(new FileReader(deckFile))
     Using.resource(reader) { reader =>
-      val deckString = reader.lines().toArray.mkString("\n")
+      val deckString = reader.lines.toArray mkString "\n"
       parseDeck(deckString)
     }
 
@@ -103,16 +110,15 @@ def parseDeck(deckString: String): Deck =
     val count = line.split(" ").head.toInt
     (fetchCard(id), count)
 
-  val deck = new Deck
   val linesArray = deckString split "\r?\n"
-  val cardLines = linesArray filterNot headerLineOrEmpty // filter out the header lines and empty lines
+  val cardLines = linesArray filterNot headerLineOrEmpty toSeq // filter out the header lines and empty lines
 
-  val (cardFutures, cardCounts) = cardLines map parseCardLine unzip
+  val (cardFutures, cardCounts) = cardLines.par.map(parseCardLine).seq.unzip
+
   val cards = result(sequence(cardFutures), Duration.Inf)
-  val countOf = cards.zip(cardCounts).toMap
+  val cardsToCounts = cards zip cardCounts toMap
 
-  cards foreach(card => deck add(card, countOf(card)))
-  deck
+  new Deck(cardsToCounts)
 
 
 

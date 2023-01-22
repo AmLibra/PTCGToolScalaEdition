@@ -9,4 +9,5 @@ import java.awt.Dimension
 
 def statsTabContent(windowSize: Dimension): VBox =
   new VBox:
-    children = List(new Label("Stats - WIP"))
+    decorate(this, 20, 30)
+    children = List(SimpleLabel("Stats Tab Content - WIP", 600))

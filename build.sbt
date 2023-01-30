@@ -23,6 +23,5 @@ libraryDependencies ++= {
 
 lazy val root = (project in file("."))
   .settings(
-    name := "PTCGToolScalaEdition",
-    idePackagePrefix := Some("ptcgtool")
+    name := "PTCGToolScalaEdition"
   )

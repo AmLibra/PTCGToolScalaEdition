@@ -1,7 +1,7 @@
 package ptcgtool
-package objects
+package backend
 
-import api.{Card, CardFetcher}
+import api.CardFetcher
 import api.CardFetcher.fetchCard
 
 import scala.concurrent.ExecutionContext.Implicits.global

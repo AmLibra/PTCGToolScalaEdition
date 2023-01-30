@@ -1,5 +1,5 @@
 package ptcgtool
-package tabs
+package frontend
 
 import scalafx.scene.control.Label
 import scalafx.scene.layout.VBox

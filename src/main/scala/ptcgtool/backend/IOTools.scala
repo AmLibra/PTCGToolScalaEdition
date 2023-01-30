@@ -1,13 +1,13 @@
-package ptcgtool
-package api
+package ptcgtool.backend
 
-import api.CardFetcher.fetchCard
-import api.IOTools.cacheFolder
-import objects.Deck
+import ptcgtool.api.CardFetcher.fetchCard
+import ptcgtool.backend.IOTools.cacheFolder
 
 import java.io.*
 import java.net.URL
 import java.nio.file.Path
+import scala.IArray.unzip
+import scala.collection.parallel.CollectionConverters.{ImmutableIterableIsParallelizable, ImmutableSeqIsParallelizable, IterableIsParallelizable, seqIsParallelizable}
 import scala.compiletime.ops.boolean.||
 import scala.concurrent.Await.result
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -17,11 +17,6 @@ import scala.concurrent.{Await, Future}
 import scala.io.Source
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try, Using}
-import collection.parallel.CollectionConverters.ImmutableSeqIsParallelizable
-import collection.parallel.CollectionConverters.ImmutableIterableIsParallelizable
-import collection.parallel.CollectionConverters.seqIsParallelizable
-import collection.parallel.CollectionConverters.IterableIsParallelizable
-import scala.IArray.unzip
 
 // Bunch of syntax sugar for working with files
 private def stream(fromURl: URL): InputStream = fromURl openStream
@@ -30,7 +25,7 @@ private def stream(toPath: String): OutputStream = FileOutputStream(toPath)
 
 private def transferData(from: InputStream, target: OutputStream): Unit = from transferTo target
 
-private def ensureIsCreated(folder: File): Boolean =
+def ensureIsCreated(folder: File): Boolean =
   if (!folder.exists)
     folder.mkdirs()
   folder.exists
@@ -63,9 +58,9 @@ object IOTools:
     cacheFolder.listFiles foreach (_.delete)
     println(s"$directorySizeToString found in cache folder now !")
 
-  def directorySize: Long = cacheFolder.listFiles map (_.length) sum
+  private def directorySize: Long = cacheFolder.listFiles map (_.length) sum
 
-  def directorySizeToString: String =
+  private def directorySizeToString: String =
     val size = directorySize
     if size < 1024 then size + " bytes"
     else if size < 1024 * 1024 then size / 1024 + " KB"
@@ -95,7 +90,7 @@ object IOTools:
 
   def readDeck(name: String): Deck =
     val deckFile = File(DECKS_LOCATION + name)
-    val reader = new BufferedReader(new FileReader(deckFile))
+    val reader = BufferedReader(FileReader(deckFile))
     Using.resource(reader) { reader =>
       val deckString = reader.lines.toArray mkString "\n"
       parseDeck(deckString)

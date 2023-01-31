@@ -32,6 +32,11 @@ final class Deck:
     sort
     cards
 
+  def allWithAmounts: Map[Card, Int] =
+    sort
+    val uniqueCards = cards.distinct
+    uniqueCards.map(card => (card, countOf(card))).toMap
+
   def pokemonCards: Seq[Card] = cards.filter(_.isPokemon).sortBy(_.name.get)
 
   def trainerCards: Seq[Card] = cards.filter(_.isTrainer).sortBy(_.name.get)
@@ -57,7 +62,7 @@ final class Deck:
   def sort: Unit =
     val (pokemon, trainersAndEnergies) = cards.partition(_.isPokemon)
     val (trainers, energies) = trainersAndEnergies.partition(_.isTrainer)
-    cards = pokemon.sortBy(_.name.get) ++ trainers.sortBy(_.name.get) ++ energies.sortBy(_.name.get)
+    cards = pokemon.sortBy(card => (card.getName, card.getId)) ++ trainers.sortBy(card => (card.getName, card.getId)) ++ energies.sortBy(card => (card.getName, card.getId))
 
   // check if the deck contains a card
   def contains(card: Card): Boolean = cards.contains(card)

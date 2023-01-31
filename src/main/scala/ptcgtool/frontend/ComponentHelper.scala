@@ -208,8 +208,10 @@ def deckManagerCardWindow(card: Card, deck: Deck, deckViewPane: ScrollPane, wind
     runLater {
       updateCardCount.run()
       val cardView: VBox = toDeckCardView(card, deck, deckViewPane, windowSize)
-      val cardViewIndex: Int = deck.all.par.distinct.indexOf(card)
-      getContent(deckViewPane).children.set(cardViewIndex, cardView)
+      val cardViewIndex: Int = deck.allWithAmounts.keys.toList.indexOf(card)
+      val paneChildren = getContent(deckViewPane).children
+      if paneChildren.size <= cardViewIndex then paneChildren.add(cardView)
+      else paneChildren.set(cardViewIndex, cardView)
     }
 
   def deckAdd(card: Card): Unit =
@@ -264,16 +266,13 @@ def loadDecksSelector(): Unit =
 def getContent(scrollPane: ScrollPane): HBox = scrollPane.content.value.asInstanceOf[javafx.scene.layout.HBox]
 
 def cardImageView(card: Card, size: Double, eventHandler: EventHandler[_ >: MouseEvent]): ImageView =
-  val smallCardImage = Try(card.getSmallImage).toOption match
-    case Some(i) => i
-    case None => EMPTY_CARD
-
-  val imageView = new ImageView(smallCardImage):
+  val start = System.currentTimeMillis()
+  val imageView = new ImageView(EMPTY_CARD):
     fitHeight = size
     preserveRatio = true
     onMouseClicked = eventHandler
 
-  val loadLargeImageTask = new Task[Image]:
+  lazy val loadLargeImageTask = new Task[Image]:
     override def call(): Image =
       Try(card.getLargeImage).toOption match
         case Some(i) => i
@@ -282,7 +281,22 @@ def cardImageView(card: Card, size: Double, eventHandler: EventHandler[_ >: Mous
   loadLargeImageTask.valueProperty addListener (_ =>
     if loadLargeImageTask isDone then runLater(imageView.image = loadLargeImageTask.value get)
     )
-  loadLargeImageTask.run()
+  //lower priority so that the small image loads first
+
+  lazy val loadSmallImageTask = new Task[Image]:
+    override def call(): Image =
+      Try(card.getSmallImage).toOption match
+        case Some(i) => i
+        case None => EMPTY_CARD
+
+  loadSmallImageTask.valueProperty addListener (_ =>
+    if loadSmallImageTask isDone then {
+      runLater(imageView.image = loadSmallImageTask.value get)
+      loadLargeImageTask.run()
+    }
+    )
+  loadSmallImageTask.run()
+  println(s"Loaded card image in ${System.currentTimeMillis() - start}ms")
   imageView
 
 def decorate(box: HBox, padding: Double, spacing: Double): Unit =

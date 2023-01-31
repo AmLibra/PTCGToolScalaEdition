@@ -1,6 +1,6 @@
 package ptcgtool
 
-import ptcgtool.api.CardFetcher.generateSearchDirectoryV2
+import ptcgtool.api.CardFetcher.{generateSearchDirectoryV2, updateDB}
 import ptcgtool.frontend.{DARK_GRAY, TAB_STYLE, TabLabel, backgroundIs, deckBuilderTabContent, statsTabContent}
 import scalafx.application.JFXApp3
 import scalafx.application.JFXApp3.PrimaryStage
@@ -22,10 +22,6 @@ object Main extends JFXApp3:
   private final val STATS_TAB_NAME = "Stats"
 
   override def start(): Unit =
-    val start = System.currentTimeMillis
-    //generateSearchDirectoryV2()
-    println(s"Search directory generated in ${System.currentTimeMillis - start} ms")
-
     new PrimaryStage:
       title = APP_NAME
       scene = new Scene(WINDOW_SIZE.width, WINDOW_SIZE.height):

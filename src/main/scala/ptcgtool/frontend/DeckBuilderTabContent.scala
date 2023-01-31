@@ -56,17 +56,16 @@ def deckBuilderTabContent(windowSize: Dimension): VBox =
       def toggleStandardOnly(): Unit = standardOnly = !standardOnly
 
       def fetchCardsAndUpdate(query: String): Unit =
+        val start = System.currentTimeMillis()
         def processIfTooMany(cards: Seq[Card]): ParSeq[ImageView] =
-          val start = System.currentTimeMillis()
-          val out = (if cards.size > 150 then processed(cards) else cards.par).map(toSearchResultsView(_, deck, deckViewPane, windowSize))
+          val out = (if cards.size > 150 then processed (cards) else cards par) map(toSearchResultsView(_, deck, deckViewPane, windowSize))
           println(s"Generating view took ${System.currentTimeMillis() - start} ms")
           out
-
         statusLabel.text = "Searching..."
-        fetchCards(query, standardOnly) map processIfTooMany onComplete {
-          case Success(imageViews) => runLater {
-            getContent(searchResultsPane).children = imageViews seq;
-            statusLabel.text = s"Found ${imageViews.size} cards"
+        fetchCards(query, standardOnly) onComplete {
+          case Success(cards) => runLater {
+            getContent(searchResultsPane).children = processIfTooMany(cards) seq;
+            statusLabel.text = s"Found ${cards.size} cards"
           }
           case Failure(exception) => throw exception
         }

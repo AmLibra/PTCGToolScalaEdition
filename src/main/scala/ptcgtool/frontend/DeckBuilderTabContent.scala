@@ -69,6 +69,7 @@ def deckBuilderTabContent(windowSize: Dimension): VBox =
           }
           case Failure(exception) => throw exception
         }
+        println(s"Fetching cards took ${System.currentTimeMillis() - start} ms")
 
       children = SimpleCheckBox("Search only in Standard", _ => toggleStandardOnly()) ::
         SimpleSearchBar(fetchCardsAndUpdate, windowSize.getWidth * 0.5) ::

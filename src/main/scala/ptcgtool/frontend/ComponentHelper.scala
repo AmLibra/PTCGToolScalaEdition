@@ -266,7 +266,6 @@ def loadDecksSelector(): Unit =
 def getContent(scrollPane: ScrollPane): HBox = scrollPane.content.value.asInstanceOf[javafx.scene.layout.HBox]
 
 def cardImageView(card: Card, size: Double, eventHandler: EventHandler[_ >: MouseEvent]): ImageView =
-  val start = System.currentTimeMillis()
   val imageView = new ImageView(EMPTY_CARD):
     fitHeight = size
     preserveRatio = true
@@ -281,7 +280,9 @@ def cardImageView(card: Card, size: Double, eventHandler: EventHandler[_ >: Mous
   loadLargeImageTask.valueProperty addListener (_ =>
     if loadLargeImageTask isDone then runLater(imageView.image = loadLargeImageTask.value get)
     )
-  //lower priority so that the small image loads first
+
+  lazy val loadLargeTaskThread = Thread(loadLargeImageTask)
+  loadLargeTaskThread.setPriority(Thread.MIN_PRIORITY)
 
   lazy val loadSmallImageTask = new Task[Image]:
     override def call(): Image =
@@ -289,14 +290,16 @@ def cardImageView(card: Card, size: Double, eventHandler: EventHandler[_ >: Mous
         case Some(i) => i
         case None => EMPTY_CARD
 
-  loadSmallImageTask.valueProperty addListener (_ =>
-    if loadSmallImageTask isDone then {
-      runLater(imageView.image = loadSmallImageTask.value get)
-      loadLargeImageTask.run()
+  loadSmallImageTask.valueProperty.addListener { _ =>
+    if (loadSmallImageTask.isDone) {
+      runLater(imageView.image = loadSmallImageTask.value.get)
+      loadLargeTaskThread.start()
     }
-    )
-  loadSmallImageTask.run()
-  println(s"Loaded card image in ${System.currentTimeMillis() - start}ms")
+  }
+
+  val loadSmallTaskThread = Thread(loadSmallImageTask)
+  loadSmallTaskThread.start()
+
   imageView
 
 def decorate(box: HBox, padding: Double, spacing: Double): Unit =

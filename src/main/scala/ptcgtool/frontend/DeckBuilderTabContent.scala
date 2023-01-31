@@ -73,7 +73,7 @@ def deckBuilderTabContent(windowSize: Dimension): VBox =
 
       children = SimpleCheckBox("Search only in Standard", _ => toggleStandardOnly()) ::
         SimpleSearchBar(fetchCardsAndUpdate, windowSize.getWidth * 0.5) ::
-        statusLabel :: SimpleButton("Clear Cache", _ => clearCache) :: Nil
+        statusLabel :: SimpleButton("Clear Cache", _ => clearCache()) :: Nil
     children = Seq(searchBarBox, searchResultsPane)
 
   val deckView: VBox = new VBox:

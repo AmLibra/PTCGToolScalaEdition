@@ -6,11 +6,12 @@ import javafx.concurrent.Task
 import javafx.event.EventHandler
 import javafx.scene.input.{MouseEvent, ScrollEvent}
 import javafx.util.Duration
-import ptcgtool.backend.{Card, Deck}
+import ptcgtool.backend.{Card, Deck, EMPTY_CARD}
 import scalafx.Includes.{jfxHBox2sfx, jfxTask2sfxTask}
 import scalafx.animation.Interpolator.EaseBoth
 import scalafx.animation.Timeline.Indefinite
 import scalafx.animation.{Animation, AnimationTimer, Interpolator}
+import scalafx.application.Platform
 import scalafx.application.Platform.runLater
 import scalafx.collections.ObservableBuffer
 import scalafx.geometry.Pos.Center
@@ -37,8 +38,6 @@ import scala.language.postfixOps
 import scala.util.Try
 
 private val SCROLL_SPEED = 1.5
-
-private val EMPTY_CARD = Image(FileInputStream("C:\\Users\\usr\\IdeaProjects\\PTCGToolScalaEdition\\src\\resources\\emptyCard.png"))
 
 private val WHITE = "#ffffff"
 val DARK_GRAY = "#2b2b2b"
@@ -161,7 +160,6 @@ def updateDeckViewPane(deck: Deck, deckViewPane: ScrollPane, windowSize: Dimensi
     getContent(deckViewPane).children = deck.all.par.distinct map (toDeckCardView(_, deck, deckViewPane, windowSize)) seq
   }
 
-
 def popup(content: Scene): Unit =
   new Stage:
     initModality(ApplicationModal)
@@ -173,10 +171,9 @@ def popup(content: Scene): Unit =
 
 def processed(cards: Seq[Card]): ParSeq[Card] =
     val start = System.currentTimeMillis()
-    val out = cards.par.groupBy(_.getName) map (_._2.head) toSeq;
+    val out = cards.par.groupBy(_.name) map (_._2.head) toSeq;
     println(s"Processed ${cards.size} in ${System.currentTimeMillis() - start} ms")
     out
-
 
 def deckViewStatsBox(deck: Deck): VBox =
   new VBox:
@@ -261,45 +258,31 @@ def loadDecksSelector(): Unit =
     }
   )
 
-
 // have to specify type because of type erasure
 def getContent(scrollPane: ScrollPane): HBox = scrollPane.content.value.asInstanceOf[javafx.scene.layout.HBox]
 
 def cardImageView(card: Card, size: Double, eventHandler: EventHandler[_ >: MouseEvent]): ImageView =
-  val imageView = new ImageView(EMPTY_CARD):
+  val imageView = new ImageView(card.imageIfExists):
     fitHeight = size
     preserveRatio = true
     onMouseClicked = eventHandler
 
-  lazy val loadLargeImageTask = new Task[Image]:
-    override def call(): Image =
-      Try(card.getLargeImage).toOption match
-        case Some(i) => i
-        case None => EMPTY_CARD
+  def loadTask(image: Image, nextTask: Task[Image] = null): Task[Image] =
+    new Task[Image]:
+      valueProperty().addListener { _ =>
+        if isDone then
+          Platform.runLater(imageView.image = this.value get)
+          if nextTask != null then
+            val t = Thread(nextTask)
+            t.setPriority(Thread.MIN_PRIORITY)
+            t.start()
+      }
+      override def call(): Image = image;
 
-  loadLargeImageTask.valueProperty addListener (_ =>
-    if loadLargeImageTask isDone then runLater(imageView.image = loadLargeImageTask.value get)
-    )
-
-  lazy val loadLargeTaskThread = Thread(loadLargeImageTask)
-  loadLargeTaskThread.setPriority(Thread.MIN_PRIORITY)
-
-  lazy val loadSmallImageTask = new Task[Image]:
-    override def call(): Image =
-      Try(card.getSmallImage).toOption match
-        case Some(i) => i
-        case None => EMPTY_CARD
-
-  loadSmallImageTask.valueProperty.addListener { _ =>
-    if (loadSmallImageTask.isDone) {
-      runLater(imageView.image = loadSmallImageTask.value.get)
-      loadLargeTaskThread.start()
-    }
-  }
-
-  val loadSmallTaskThread = Thread(loadSmallImageTask)
-  loadSmallTaskThread.start()
-
+  val loadSmallImageTask = loadTask(card.getSmallImage, loadTask(card.getLargeImage))
+  val t = Thread(loadSmallImageTask)
+  t.setPriority(Thread.MIN_PRIORITY)
+  t.start()
   imageView
 
 def decorate(box: HBox, padding: Double, spacing: Double): Unit =

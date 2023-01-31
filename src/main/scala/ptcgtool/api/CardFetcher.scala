@@ -8,7 +8,8 @@ import org.json4s.JsonDSL.seq2jvalue
 import org.json4s.native.JsonMethods.*
 import org.json4s.native.Serialization
 import org.json4s.native.Serialization.{read, write}
-import ptcgtool.backend.{Card, ensureIsCreated}
+import ptcgtool.backend.IOTools.ensureIsCreated
+import ptcgtool.backend.Card
 
 import java.io.*
 import java.net.http.HttpClient.Version
@@ -119,7 +120,7 @@ object CardFetcher:
     val cardJsonFolders = cardJsonFolder.listFiles
     cardJsonFolders.par.foreach(setFolder =>
       val allCards = setFolder.listFiles.par.map(file => readCardFromDB(file.getName))
-      val cardKeyWordFiles: ParMap[Seq[String], String] = allCards.map(card => generateSearchDirectoryFiles(card.getName) -> card.getId) toMap;
+      val cardKeyWordFiles: ParMap[Seq[String], String] = allCards.map(card => generateSearchDirectoryFiles(card.name) -> card.id) toMap;
       cardKeyWordFiles.foreach((files, id) =>
         files.par.foreach(file =>
           Using(PrintWriter(FileOutputStream(file, true)))(writer => writer write id + "\n")

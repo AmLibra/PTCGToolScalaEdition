@@ -4,13 +4,36 @@ package backend
 import api.CardFetcher
 import api.CardFetcher.fetchCard
 
+import scala.concurrent.Await.result
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+import scala.concurrent.Future.sequence
+import scala.concurrent.duration.Duration.Inf
 import scala.language.postfixOps
 import scala.util.{Failure, Success}
+import collection.parallel.CollectionConverters.ImmutableSeqIsParallelizable
+import collection.parallel.CollectionConverters.ImmutableIterableIsParallelizable
+import collection.parallel.CollectionConverters.seqIsParallelizable
+import collection.parallel.CollectionConverters.IterableIsParallelizable
 
-// this is the implementation of a Pokemon TCG deck of Cards (a deck of 60 cards)
-// it is a List of Cards
+
+def parseDeck(deckStringLines: List[String]): Deck =
+  def headerLineOrEmpty(line: String): Boolean =
+    (line isEmpty) || (line startsWith "Pokemon") || (line startsWith "Trainer") || (line startsWith "Energy")
+
+  def parseCardLine(line: String): (Future[Card], Int) =
+    val id = line.split(" ").last // some cards have spaces in their name
+    val count = line.split(" ").head.toInt
+    (fetchCard(id), count)
+
+  val cardLines = deckStringLines filterNot headerLineOrEmpty // filter out the header lines and empty lines
+
+  val (cardFutures, cardCounts) = cardLines.par.map(parseCardLine).seq unzip
+
+  val cardsToCounts = result(sequence(cardFutures), Inf) zip cardCounts toMap
+
+  Deck(cardsToCounts)
+
 final class Deck:
 
   private var cards: List[Card] = List.empty[Card]
@@ -26,7 +49,7 @@ final class Deck:
 
   def countOf(card: Card): Int = cards.count(_ == card)
 
-  def countOf(cardName: String): Int = cards.count(_.name.get == cardName)
+  def countOf(cardName: String): Int = cards.count(_.name == cardName)
 
   def all: Seq[Card] =
     sort
@@ -37,11 +60,11 @@ final class Deck:
     val uniqueCards = cards.distinct
     uniqueCards.map(card => (card, countOf(card))).toMap
 
-  def pokemonCards: Seq[Card] = cards.filter(_.isPokemon).sortBy(_.name.get)
+  def pokemonCards: Seq[Card] = cards.filter(_.isPokemon).sortBy(_.name)
 
-  def trainerCards: Seq[Card] = cards.filter(_.isTrainer).sortBy(_.name.get)
+  def trainerCards: Seq[Card] = cards.filter(_.isTrainer).sortBy(_.name)
 
-  def energyCards: Seq[Card] = cards.filter(_.isEnergy).sortBy(_.name.get)
+  def energyCards: Seq[Card] = cards.filter(_.isEnergy).sortBy(_.name)
 
   // add a card to the deck
   def add(card: Card): Unit = cards = card :: cards
@@ -62,7 +85,7 @@ final class Deck:
   def sort: Unit =
     val (pokemon, trainersAndEnergies) = cards.partition(_.isPokemon)
     val (trainers, energies) = trainersAndEnergies.partition(_.isTrainer)
-    cards = pokemon.sortBy(card => (card.getName, card.getId)) ++ trainers.sortBy(card => (card.getName, card.getId)) ++ energies.sortBy(card => (card.getName, card.getId))
+    cards = pokemon.sortBy(card => (card.name, card.id)) ++ trainers.sortBy(card => (card.name, card.id)) ++ energies.sortBy(card => (card.name, card.id))
 
   // check if the deck contains a card
   def contains(card: Card): Boolean = cards.contains(card)
@@ -71,7 +94,7 @@ final class Deck:
   // a deck is legal if it contains exactly 60 cards, a maximum of 4 copies of each card name that is not a basic energy card
   // and at least 1 basic pokemon card, ruleboxes should be checked separately
   def isLegalStandard: Boolean =
-    val cardNames = cards.map(_.getName)
+    val cardNames = cards.map(_.name)
     val uniqueNameCardCounts = cardNames.distinct map countOf
     val basicPokemonCount = cards.count(_.isBasicPokemon)
     val allCardsStandardLegal = cards.forall(_.isStandardLegal)
@@ -84,9 +107,9 @@ final class Deck:
   // the format of a card line is "x count name id", every card should get a unique line
   override def toString: String =
     def print(cards: Seq[Card]): String =
-      val uniqueCardIds = cards map (_.getId) distinct
+      val uniqueCardIds = cards map (_.id) distinct
       val cardCounts = cards.distinct map countOf
-      val cardNames = uniqueCardIds map (id => cards.find(_.getId == id).get.getName)
+      val cardNames = uniqueCardIds map (id => cards.find(_.id == id).get.name)
       val cardLines =
         cardCounts zip cardNames zip uniqueCardIds map { case ((count, name), id) => s"$count $name $id" }
       cardLines.mkString("\n")
@@ -102,3 +125,4 @@ final class Deck:
     pokemonHeader + s"$pokemonLines\n" +
       trainerHeader + s"$trainerLines\n" +
       energyHeader + s"$energyLines"
+

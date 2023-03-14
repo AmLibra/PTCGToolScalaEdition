@@ -27,7 +27,7 @@ case class Card(name: String, id: String, supertype: String, subtypes: Option[Li
 
   def isEnergy: Boolean = supertype == "Energy"
 
-  def isBasicPokemon: Boolean = isPokemon && subtypes.contains(List("Basic"))
+  def isBasic: Boolean = isPokemon && (subtypes.get contains List("Basic"))
 
   def isStandardLegal: Boolean = legalities.exists(_.standard.get == "Legal")
 

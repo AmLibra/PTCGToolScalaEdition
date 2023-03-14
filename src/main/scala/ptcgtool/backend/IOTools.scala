@@ -97,14 +97,14 @@ object IOTools:
     val deckFile = File(DECKS_LOCATION + addDeckExtension(name))
     Using.resource(PrintWriter(deckFile))(_.write(deck toString))
 
-  private def directorySize: Long = cacheFolder.listFiles map (_.length) sum
+  private def addDeckExtension(deckName: String): String = deckName + DECK_FILE_EXTENSION
 
   private def directorySizeToString: String =
-    val size = directorySize
+    val size = cacheFolder.listFiles map (_.length) sum;
     if size < 1024 then size + " bytes"
     else if size < 1024 * 1024 then size / 1024 + " KB"
     else if size < 1024 * 1024 * 1024 then size / 1024 / 1024 + " MB"
     else size / 1024 / 1024 / 1024 + " GB"
 
-  private def addDeckExtension(deckName: String): String = deckName + DECK_FILE_EXTENSION
+
 
